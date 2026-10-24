@@ -1,0 +1,19 @@
+{
+    "incident_id": "IR-2026-001",
+    "title": "Suspicious Persistence Attempt Detected",
+    "timestamp": "2026-01-15T08:35:22Z",
+    "severity": "high",
+    "description": "Multiple sudo authentication failures followed by successful root execution",
+    "affected_systems": ["trustx-server"],
+    "indicators": [
+        "Failed sudo authentication from 10.0.0.23",
+        "Successful root execution via sudo",
+        "Unusual find command execution"
+    ],
+    "actions_taken": [
+        "Account root locked",
+        "Investigated sudo history",
+        "Updated detection rules"
+    ],
+    "status": "contained"
+}

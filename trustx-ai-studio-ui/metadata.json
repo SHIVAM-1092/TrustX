@@ -1,0 +1,6 @@
+{
+  "name": "TrustX AI Security Range",
+  "description": "Enterprise cybersecurity and AI safety training platform for Hack in the Hills, featuring interactive prompt injection labs, policy gateway inspection, and forensic audit telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

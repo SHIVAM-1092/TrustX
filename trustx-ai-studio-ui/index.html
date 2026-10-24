@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrustX AI Security Range</title>
+    <meta name="description" content="Enterprise cybersecurity and AI safety training platform for Hack in the Hills, featuring interactive prompt injection labs, policy gateway inspection, and forensic audit telemetry." />
+    <meta property="og:title" content="TrustX AI Security Range" />
+    <meta property="og:description" content="Enterprise cybersecurity and AI safety training platform for Hack in the Hills, featuring interactive prompt injection labs, policy gateway inspection, and forensic audit telemetry." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // Ignore WebSocket and HMR errors per AI Studio environment constraints
+      window.addEventListener('error', function(event) {
+        if (
+          (event.message && (event.message.includes('WebSocket') || event.message.includes('@vite/client') || event.message.includes('createWebSocketModuleRunnerTransport'))) ||
+          (event.filename && event.filename.includes('@vite/client'))
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+          return true;
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(event) {
+        if (
+          event.reason &&
+          (String(event.reason).includes('WebSocket') ||
+           String(event.reason).includes('@vite/client') ||
+           String(event.reason).includes('createWebSocketModuleRunnerTransport'))
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

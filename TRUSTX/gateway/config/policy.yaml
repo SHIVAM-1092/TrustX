@@ -1,0 +1,198 @@
+# TrustX Policy Configuration
+# Default-DENY: All access is denied unless explicitly allowed
+# Rules are evaluated in order; first match wins
+
+version: "1.0"
+default_action: "DENY"  # fail-closed: any error or no-match = DENY
+
+rules:
+  # -----------------------------------------------------------------------
+  # RED TEAM DOMAIN POLICIES
+  # -----------------------------------------------------------------------
+  - name: "red-to-target-attack"
+    description: "Red team can send adversarial prompts to target via gateway"
+    source_domain: "red"
+    destination_domain: "target"
+    allowed_paths:
+      - "/v1/completions"
+      - "/v1/chat/completions"
+      - "/v1/embeddings"
+    allowed_methods: ["POST"]
+    action: "ALLOW"
+
+  - name: "red-health-check"
+    description: "Red team can check target health"
+    source_domain: "red"
+    destination_domain: "target"
+    allowed_paths:
+      - "/health"
+    allowed_methods: ["GET"]
+    action: "ALLOW"
+
+  # Red team can request tokens from gateway using mTLS
+  - name: "red-to-gateway-token"
+    description: "Red team can request signed tokens from gateway using mTLS"
+    source_domain: "red"
+    destination_domain: "gateway"
+    allowed_paths:
+      - "/auth/token"
+    allowed_methods: ["POST"]
+    action: "ALLOW"
+
+  # Red team cannot access blue team directly
+  - name: "red-to-blue-deny"
+    description: "Red team cannot access blue team domain"
+    source_domain: "red"
+    destination_domain: "blue"
+    action: "DENY"
+
+  # Red team cannot access gateway admin endpoints
+  - name: "red-to-gateway-admin-deny"
+    description: "Red team cannot access gateway admin"
+    source_domain: "red"
+    destination_domain: "gateway"
+    allowed_paths:
+      - "/admin/*"
+      - "/audit/*"
+      - "/policy/*"
+    action: "DENY"
+
+  # -----------------------------------------------------------------------
+  # TARGET DOMAIN POLICIES
+  # -----------------------------------------------------------------------
+  - name: "target-to-blue-defense"
+    description: "Target can send responses to blue team for analysis"
+    source_domain: "target"
+    destination_domain: "blue"
+    allowed_paths:
+      - "/v1/analyze"
+      - "/v1/feedback"
+    allowed_methods: ["POST"]
+    action: "ALLOW"
+
+  - name: "target-health-check"
+    description: "Target health endpoint"
+    source_domain: "target"
+    destination_domain: "gateway"
+    allowed_paths:
+      - "/health"
+    allowed_methods: ["GET"]
+    action: "ALLOW"
+
+  # Target cannot initiate connections to red team
+  - name: "target-to-red-deny"
+    description: "Target cannot access red team"
+    source_domain: "target"
+    destination_domain: "red"
+    action: "DENY"
+
+  # -----------------------------------------------------------------------
+  # BLUE TEAM DOMAIN POLICIES
+  # -----------------------------------------------------------------------
+  - name: "blue-to-target-monitor"
+    description: "Blue team can monitor target state"
+    source_domain: "blue"
+    destination_domain: "target"
+    allowed_paths:
+      - "/v1/state"
+      - "/v1/conversations/*"
+      - "/health"
+    allowed_methods: ["GET"]
+    action: "ALLOW"
+
+  - name: "blue-to-target-control"
+    description: "Blue team can reset/control target"
+    source_domain: "blue"
+    destination_domain: "target"
+    allowed_paths:
+      - "/v1/reset"
+      - "/v1/config"
+    allowed_methods: ["POST", "PUT"]
+    action: "ALLOW"
+
+  - name: "blue-audit-access"
+    description: "Blue team can read audit logs via gateway"
+    source_domain: "blue"
+    destination_domain: "gateway"
+    allowed_paths:
+      - "/audit/*"
+    allowed_methods: ["GET"]
+    action: "ALLOW"
+
+  # Blue team cannot access red team
+  - name: "blue-to-red-deny"
+    description: "Blue team cannot access red team"
+    source_domain: "blue"
+    destination_domain: "red"
+    action: "DENY"
+
+  # -----------------------------------------------------------------------
+  # UI / EXTERNAL ACCESS POLICIES (via gateway, no mTLS client cert)
+  # These are for the browser demo interface
+  # -----------------------------------------------------------------------
+  - name: "ui-to-gateway-health"
+    description: "UI can check gateway health"
+    source_domain: "ui"
+    destination_domain: "gateway"
+    allowed_paths:
+      - "/health"
+    allowed_methods: ["GET"]
+    action: "ALLOW"
+
+  - name: "ui-to-red-simulate"
+    description: "UI can trigger red team simulations"
+    source_domain: "ui"
+    destination_domain: "red"
+    allowed_paths:
+      - "/v1/simulate"
+      - "/v1/scenarios"
+    allowed_methods: ["POST", "GET"]
+    action: "ALLOW"
+
+  - name: "ui-to-red-challenges"
+    description: "UI can access red team challenge endpoints"
+    source_domain: "ui"
+    destination_domain: "red"
+    allowed_paths:
+      - "/v1/challenges"
+      - "/v1/challenges/*"
+    allowed_methods: ["GET", "POST"]
+    action: "ALLOW"
+
+  - name: "ui-to-target-query"
+    description: "UI can query target state"
+    source_domain: "ui"
+    destination_domain: "target"
+    allowed_paths:
+      - "/v1/state"
+      - "/v1/conversations/*"
+      - "/health"
+    allowed_methods: ["GET"]
+    action: "ALLOW"
+
+  - name: "ui-to-blue-defense"
+    description: "UI can trigger blue team defenses"
+    source_domain: "ui"
+    destination_domain: "blue"
+    allowed_paths:
+      - "/v1/analyze"
+      - "/v1/defend"
+      - "/v1/rules"
+    allowed_methods: ["POST", "GET"]
+    action: "ALLOW"
+
+  - name: "ui-audit-read"
+    description: "UI can read audit logs"
+    source_domain: "ui"
+    destination_domain: "gateway"
+    allowed_paths:
+      - "/audit/*"
+    allowed_methods: ["GET"]
+    action: "ALLOW"
+
+  # -----------------------------------------------------------------------
+  # CATCH-ALL DENY (explicit, though default_action covers it)
+  # -----------------------------------------------------------------------
+  - name: "default-deny-all"
+    description: "Explicit catch-all deny"
+    action: "DENY"

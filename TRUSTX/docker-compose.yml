@@ -1,0 +1,238 @@
+version: '3.8'
+
+services:
+  # Policy Gateway - Central authz, audit, routing
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: trustx-gateway
+    ports:
+      - "8443:8443"
+    environment:
+      - TRUSTX_SECRET_KEY=${TRUSTX_SECRET_KEY}
+      - GATEWAY_CONFIG=/config/gateway.yaml
+      - GATEWAY_CA_CERT=/certs/ca.crt
+      - GATEWAY_CA_KEY=/certs/ca.key
+      - GATEWAY_SERVER_CERT=/certs/gateway.crt
+      - GATEWAY_SERVER_KEY=/certs/gateway.key
+      - AUDIT_LOG_PATH=/audit/audit.log
+      - POLICY_PATH=/config/policy.yaml
+      - RED_TEAM_URL=https://red-team:8001
+      - TARGET_URL=https://target:8002
+      - BLUE_TEAM_URL=https://blue-team:8003
+      - SKIP_TLS_VERIFY=true
+    volumes:
+      - ./gateway/config:/config:ro
+      - ./gateway/certs:/certs:ro
+      - ./audit:/audit
+      - ./shared:/shared:ro
+    networks:
+      - gateway-net
+      - red-net
+      - target-net
+      - blue-net
+    healthcheck:
+      test: ["CMD", "python3", "/app/gateway/healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - red-team
+      - target
+      - blue-team
+
+  # Red Team Domain - Synthetic adversarial workloads
+  red-team:
+    build:
+      context: .
+      dockerfile: red-team/Dockerfile
+    container_name: trustx-red-team
+    ports:
+      - "8001:8001"
+    environment:
+      - DOMAIN=red
+      - SERVICE_PORT=8001
+      - GATEWAY_URL=https://gateway:8443
+      - TRUSTX_SECRET_KEY=${TRUSTX_SECRET_KEY}
+      - GATEWAY_CA_CERT=/certs/ca.crt
+      - CLIENT_CERT=/certs/red-client.crt
+      - CLIENT_KEY=/certs/red-client.key
+      - AUDIT_LOG_PATH=/audit/audit.log
+    volumes:
+      - ./red-team/certs:/certs:ro
+      - ./audit:/audit
+      - ./shared:/shared:ro
+    networks:
+      - red-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--ca-certificate=/certs/ca.crt", "https://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Target Domain - Resettable synthetic LLM
+  target:
+    build:
+      context: ./target
+      dockerfile: Dockerfile
+    container_name: trustx-target
+    ports:
+      - "8002:8002"
+    environment:
+      - DOMAIN=target
+      - SERVICE_PORT=8002
+      - GATEWAY_URL=https://gateway:8443
+      - TRUSTX_SECRET_KEY=${TRUSTX_SECRET_KEY}
+      - GATEWAY_CA_CERT=/certs/ca.crt
+      - CLIENT_CERT=/certs/target-client.crt
+      - CLIENT_KEY=/certs/target-client.key
+      - AUDIT_LOG_PATH=/audit/audit.log
+    volumes:
+      - ./target/certs:/certs:ro
+      - ./audit:/audit
+      - ./shared:/shared:ro
+    networks:
+      - target-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--ca-certificate=/certs/ca.crt", "https://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Blue Team Domain - Synthetic defensive workloads
+  blue-team:
+    build:
+      context: ./blue-team
+      dockerfile: Dockerfile
+    container_name: trustx-blue-team
+    ports:
+      - "8003:8003"
+    environment:
+      - DOMAIN=blue
+      - SERVICE_PORT=8003
+      - GATEWAY_URL=https://gateway:8443
+      - TRUSTX_SECRET_KEY=${TRUSTX_SECRET_KEY}
+      - GATEWAY_CA_CERT=/certs/ca.crt
+      - CLIENT_CERT=/certs/blue-client.crt
+      - CLIENT_KEY=/certs/blue-client.key
+      - AUDIT_LOG_PATH=/audit/audit.log
+    volumes:
+      - ./blue-team/certs:/certs:ro
+      - ./audit:/audit
+      - ./shared:/shared:ro
+    networks:
+      - blue-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--ca-certificate=/certs/ca.crt", "https://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # UI - Browser demo interface
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: trustx-ui
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_GATEWAY_URL=https://localhost:8443
+      - TRUSTX_SECRET_KEY=${TRUSTX_SECRET_KEY}
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    networks:
+      - gateway-net
+      - red-exec-net
+      - blue-exec-net
+    depends_on:
+      - gateway
+
+# Red Team Execution Environment - Isolated command execution
+  red-team-exec:
+    build:
+      context: ./red-team-exec
+      dockerfile: Dockerfile
+    container_name: trustx-red-team-exec
+    ports:
+      - "8081:8081"
+    environment:
+      - SESSION_TTL_MINUTES=${SESSION_TTL_MINUTES:-30}
+      - MAX_SESSIONS=${MAX_SESSIONS:-50}
+      - DEFAULT_TIMEOUT=${DEFAULT_TIMEOUT:-30}
+      - MAX_OUTPUT_SIZE=${MAX_OUTPUT_SIZE:-10000}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+          pids: 100
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CAP_DAC_OVERRIDE
+    networks:
+      - red-exec-net
+      - target-net
+      - gateway-net
+    volumes:
+      - ./red-team-exec/workspace:/workspace
+
+# Blue Team Execution Environment - Isolated command execution
+  blue-team-exec:
+    build:
+      context: ./blue-team-exec
+      dockerfile: Dockerfile
+    container_name: trustx-blue-team-exec
+    ports:
+      - "8082:8082"
+    environment:
+      - SESSION_TTL_MINUTES=${SESSION_TTL_MINUTES:-30}
+      - MAX_SESSIONS=${MAX_SESSIONS:-50}
+      - DEFAULT_TIMEOUT=${DEFAULT_TIMEOUT:-30}
+      - MAX_OUTPUT_SIZE=${MAX_OUTPUT_SIZE:-10000}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+          pids: 100
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CAP_DAC_OVERRIDE
+    networks:
+      - blue-exec-net
+      - target-net
+      - gateway-net
+    volumes:
+      - ./blue-team-exec/workspace:/workspace
+
+networks:
+  gateway-net:
+    driver: bridge
+    name: trustx-gateway-net
+  red-net:
+    driver: bridge
+    name: trustx-red-net
+  target-net:
+    driver: bridge
+    name: trustx-target-net
+  blue-net:
+    driver: bridge
+    name: trustx-blue-net
+  red-exec-net:
+    driver: bridge
+    name: trustx-red-exec-net
+  blue-exec-net:
+    driver: bridge
+    name: trustx-blue-exec-net
+
+volumes:
+  audit-data:

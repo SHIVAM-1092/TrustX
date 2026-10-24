@@ -1,0 +1,1 @@
+# TrustX shared package root

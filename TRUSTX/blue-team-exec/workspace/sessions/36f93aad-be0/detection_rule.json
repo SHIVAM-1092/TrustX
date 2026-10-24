@@ -1,0 +1,21 @@
+{
+    "rule_id": "suspicious_sudo_cmd",
+    "title": "Suspicious Sudo Command Execution",
+    "description": "Detects sudo commands that may indicate persistence or lateral movement",
+    "author": "TrustX",
+    "status": "test",
+    "log_source": "auth.log",
+    "selection": {
+        "Command": {
+            "contains": "/bin/"
+        }
+    },
+    "filter": {
+        "EventID": {
+            "equals": 1122
+        }
+    },
+    "interval": 3600,
+    "level": "high",
+    "tags": ["sudo", "persistence", "lateral-movement"]
+}

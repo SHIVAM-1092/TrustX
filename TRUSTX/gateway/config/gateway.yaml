@@ -1,0 +1,50 @@
+# TrustX Gateway Configuration
+# All paths are container-internal paths (mounted via docker-compose)
+
+server:
+  address: ":8443"
+  read_timeout: 10
+  write_timeout: 10
+  idle_timeout: 60
+
+tls:
+  ca_cert: "/certs/ca.crt"
+  ca_key: "/certs/ca.key"
+  server_cert: "/certs/gateway.crt"
+  server_key: "/certs/gateway.key"
+  client_ca: "/certs/ca.crt"  # For mTLS client verification
+
+audit:
+  log_path: "/audit/audit.log"
+  max_entry_size: 1048576  # 1MB
+  flush_interval: 1
+
+policy:
+  path: "gateway/config/policy.yaml"
+  reload_interval: 30
+
+upstreams:
+  red:
+    url: "https://red-team:8001"
+    domain: "red"
+    timeout: 30.0
+  target:
+    url: "https://target:8002"
+    domain: "target"
+    timeout: 30.0
+  blue:
+    url: "https://blue-team:8003"
+    domain: "blue"
+    timeout: 30.0
+  red-exec:
+    url: "http://red-team-exec:8081"
+    domain: "red-exec"
+    timeout: 30.0
+  blue-exec:
+    url: "http://blue-team-exec:8082"
+    domain: "blue-exec"
+    timeout: 30.0
+
+health:
+  enabled: true
+  path: "/health"

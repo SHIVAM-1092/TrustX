@@ -1,0 +1,33 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node/UI
+node_modules/
+dist/
+coverage/
+
+# Runtime output / local diagnostics
+*.log
+*.log.*
+audit/audit.log
+audit/audit.log.state
+tests/audit/audit.log
+ui/tscheck.log
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
